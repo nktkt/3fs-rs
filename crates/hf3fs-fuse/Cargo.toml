@@ -6,6 +6,20 @@ license.workspace = true
 
 [dependencies]
 hf3fs-types.workspace = true
-hf3fs-client.workspace = true
+hf3fs-config.workspace = true
+# hf3fs-client is a dependency in principle, but we define our own FuseClient
+# trait to avoid coupling to the client crate's current state. When hf3fs-client
+# stabilizes, an adapter impl will bridge FuseClient to the real client.
+# hf3fs-client.workspace = true
+async-trait.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+anyhow.workspace = true
+libc.workspace = true
+parking_lot.workspace = true
+dashmap.workspace = true
+serde.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }

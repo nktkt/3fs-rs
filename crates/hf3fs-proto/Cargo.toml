@@ -8,3 +8,6 @@ license.workspace = true
 hf3fs-types = { workspace = true }
 hf3fs-serde = { workspace = true }
 serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

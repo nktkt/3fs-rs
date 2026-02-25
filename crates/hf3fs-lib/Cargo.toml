@@ -5,7 +5,11 @@ edition.workspace = true
 license.workspace = true
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["rlib", "cdylib", "staticlib"]
+
+[features]
+default = []
+ffi = []
 
 [dependencies]
 hf3fs-types.workspace = true

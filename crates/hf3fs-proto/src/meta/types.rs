@@ -1,12 +1,21 @@
 //! Meta service common types.
 //!
-//! Based on 3FS/src/fbs/meta/Common.h
+//! Based on 3FS/src/fbs/meta/Common.h and 3FS/src/fbs/meta/Schema.h
+//!
+//! These types model the filesystem entities: inodes, directory entries,
+//! access control, file layout, and supporting helper types used by
+//! meta service RPC request/response messages.
 
 use hf3fs_serde::{WireDeserialize, WireSerialize};
-// hf3fs_types re-exports available if needed.
 use serde::{Deserialize, Serialize};
 
+// ---------------------------------------------------------------------------
+// Bitflag wrapper types
+// ---------------------------------------------------------------------------
+
 /// Access type flags (bitmask).
+///
+/// Mirrors `meta::AccessType` in C++.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AccessType(pub u8);
 
@@ -29,8 +38,17 @@ impl WireDeserialize for AccessType {
 }
 
 /// Open flags (mirrors POSIX O_* flags).
+///
+/// Mirrors `meta::OpenFlags` in C++.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct OpenFlags(pub i32);
+
+impl OpenFlags {
+    /// Check if the flags contain O_TRUNC.
+    pub fn contains(&self, bits: i32) -> bool {
+        (self.0 & bits) == bits
+    }
+}
 
 impl WireSerialize for OpenFlags {
     fn wire_serialize(&self, buf: &mut Vec<u8>) -> Result<(), hf3fs_serde::WireError> {
@@ -45,8 +63,16 @@ impl WireDeserialize for OpenFlags {
 }
 
 /// Flags for *at() system calls (AT_SYMLINK_NOFOLLOW etc).
+///
+/// Mirrors `meta::AtFlags` in C++.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct AtFlags(pub i32);
+
+impl AtFlags {
+    pub fn contains(&self, bits: i32) -> bool {
+        (self.0 & bits) == bits
+    }
+}
 
 impl WireSerialize for AtFlags {
     fn wire_serialize(&self, buf: &mut Vec<u8>) -> Result<(), hf3fs_serde::WireError> {
@@ -61,6 +87,8 @@ impl WireDeserialize for AtFlags {
 }
 
 /// Permission bits (e.g. 0o755).
+///
+/// Mirrors `flat::Permission` / `meta::Permission` in C++.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Permission(pub u32);
 
@@ -77,8 +105,16 @@ impl WireDeserialize for Permission {
 }
 
 /// Inode flags (FS_IMMUTABLE_FL etc).
+///
+/// Mirrors `meta::IFlags` in C++.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct IFlags(pub u32);
+
+impl IFlags {
+    pub fn contains(&self, bits: u32) -> bool {
+        (self.0 & bits) == bits
+    }
+}
 
 impl WireSerialize for IFlags {
     fn wire_serialize(&self, buf: &mut Vec<u8>) -> Result<(), hf3fs_serde::WireError> {
@@ -92,13 +128,25 @@ impl WireDeserialize for IFlags {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Inode type enum
+// ---------------------------------------------------------------------------
+
 /// Inode type.
+///
+/// Mirrors `meta::InodeType` in C++.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum InodeType {
     File = 0,
     Directory = 1,
     Symlink = 2,
+}
+
+impl Default for InodeType {
+    fn default() -> Self {
+        Self::File
+    }
 }
 
 impl TryFrom<u8> for InodeType {
@@ -129,8 +177,18 @@ impl WireDeserialize for InodeType {
     }
 }
 
-/// User info for authentication/authorization.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+// ---------------------------------------------------------------------------
+// User / Client / Session types
+// ---------------------------------------------------------------------------
+
+/// User info for authentication/authorization within meta service requests.
+///
+/// Mirrors `flat::UserInfo` used in meta requests in C++.
+/// Note: this is a simpler version than `common::UserInfo` that omits the token
+/// field, matching the meta-specific usage. For interop, convert as needed.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct UserInfo {
     pub uid: u32,
     pub gid: u32,
@@ -138,28 +196,68 @@ pub struct UserInfo {
 }
 
 /// Client identifier (UUID represented as pair of u64).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// Mirrors `ClientId` in C++ (which is a pair of u64 encoding a UUID).
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    WireSerialize,
+    WireDeserialize,
+)]
 pub struct ClientId {
     pub high: u64,
     pub low: u64,
 }
 
 /// Session info for file operations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// Mirrors `meta::SessionInfo` in C++.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    WireSerialize,
+    WireDeserialize,
+)]
 pub struct SessionInfo {
     pub client: ClientId,
     pub session: ClientId,
 }
 
+// ---------------------------------------------------------------------------
+// Path and Layout types
+// ---------------------------------------------------------------------------
+
 /// Path relative to a parent inode.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// Mirrors `meta::PathAt` in C++.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct PathAt {
     pub parent: u64,
     pub path: Option<String>,
 }
 
 /// Storage layout for a file or directory.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// This is a simplified representation of `meta::Layout` in C++.
+/// The C++ layout uses a variant (Empty/ChainRange/ChainList) but for
+/// wire serialization we use a flat representation with explicit fields.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct Layout {
     pub chain_id: u64,
     pub stripe_size: u32,
@@ -167,14 +265,63 @@ pub struct Layout {
 }
 
 /// Versioned length used in sync operations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// Mirrors `meta::VersionedLength` in C++.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    WireSerialize,
+    WireDeserialize,
+)]
 pub struct VersionedLength {
     pub version: u64,
     pub length: u64,
 }
 
+// ---------------------------------------------------------------------------
+// ACL
+// ---------------------------------------------------------------------------
+
+/// Access control list for an inode.
+///
+/// Mirrors `meta::Acl` in C++.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    WireSerialize,
+    WireDeserialize,
+)]
+pub struct Acl {
+    pub uid: u32,
+    pub gid: u32,
+    pub perm: u32,
+    pub iflags: u32,
+}
+
+// ---------------------------------------------------------------------------
+// Inode
+// ---------------------------------------------------------------------------
+
 /// An inode representation.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// This is a flattened version of the C++ `meta::Inode` which uses a variant
+/// (File/Directory/Symlink). For wire format, we use a flat struct with a
+/// type discriminant and optional type-specific fields.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct Inode {
     pub id: u64,
     pub inode_type: u8,
@@ -191,15 +338,48 @@ pub struct Inode {
     pub symlink_target: Option<String>,
 }
 
+impl Inode {
+    /// Returns the `InodeType` for this inode.
+    pub fn get_type(&self) -> Option<InodeType> {
+        InodeType::try_from(self.inode_type).ok()
+    }
+
+    pub fn is_file(&self) -> bool {
+        self.inode_type == InodeType::File as u8
+    }
+
+    pub fn is_directory(&self) -> bool {
+        self.inode_type == InodeType::Directory as u8
+    }
+
+    pub fn is_symlink(&self) -> bool {
+        self.inode_type == InodeType::Symlink as u8
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Directory entry
+// ---------------------------------------------------------------------------
+
 /// A directory entry.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// Mirrors the flattened `meta::DirEntry` in C++.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct DirEntry {
     pub name: String,
     pub inode_id: u64,
     pub inode_type: u8,
 }
 
+// ---------------------------------------------------------------------------
+// Lock action
+// ---------------------------------------------------------------------------
+
 /// Lock action for directory locking.
+///
+/// Mirrors `meta::LockDirectoryReq::LockAction` in C++.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum LockAction {
@@ -207,6 +387,12 @@ pub enum LockAction {
     PreemptLock = 1,
     UnLock = 2,
     Clear = 3,
+}
+
+impl Default for LockAction {
+    fn default() -> Self {
+        Self::TryLock
+    }
 }
 
 impl TryFrom<u8> for LockAction {
@@ -238,8 +424,16 @@ impl WireDeserialize for LockAction {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Request / Response base types
+// ---------------------------------------------------------------------------
+
 /// Request base fields common to all meta requests.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// Mirrors `meta::ReqBase` in C++.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct ReqBase {
     pub user: UserInfo,
     pub client: ClientId,
@@ -248,8 +442,16 @@ pub struct ReqBase {
 }
 
 /// Response base (currently empty placeholder).
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+///
+/// Mirrors `meta::RspBase` in C++.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct RspBase {}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -270,6 +472,14 @@ mod tests {
         assert_eq!(roundtrip(&InodeType::File), InodeType::File);
         assert_eq!(roundtrip(&InodeType::Directory), InodeType::Directory);
         assert_eq!(roundtrip(&InodeType::Symlink), InodeType::Symlink);
+    }
+
+    #[test]
+    fn test_inode_type_invalid() {
+        let mut buf = Vec::new();
+        99u8.wire_serialize(&mut buf).unwrap();
+        let mut offset = 0;
+        assert!(InodeType::wire_deserialize(&buf, &mut offset).is_err());
     }
 
     #[test]
@@ -322,6 +532,30 @@ mod tests {
     }
 
     #[test]
+    fn test_inode_helpers() {
+        let file = Inode {
+            inode_type: InodeType::File as u8,
+            ..Default::default()
+        };
+        assert!(file.is_file());
+        assert!(!file.is_directory());
+        assert_eq!(file.get_type(), Some(InodeType::File));
+
+        let dir = Inode {
+            inode_type: InodeType::Directory as u8,
+            ..Default::default()
+        };
+        assert!(dir.is_directory());
+        assert!(!dir.is_file());
+
+        let sym = Inode {
+            inode_type: InodeType::Symlink as u8,
+            ..Default::default()
+        };
+        assert!(sym.is_symlink());
+    }
+
+    #[test]
     fn test_dir_entry_roundtrip() {
         let entry = DirEntry {
             name: "test.txt".to_string(),
@@ -334,6 +568,11 @@ mod tests {
     #[test]
     fn test_lock_action_roundtrip() {
         assert_eq!(roundtrip(&LockAction::TryLock), LockAction::TryLock);
+        assert_eq!(
+            roundtrip(&LockAction::PreemptLock),
+            LockAction::PreemptLock
+        );
+        assert_eq!(roundtrip(&LockAction::UnLock), LockAction::UnLock);
         assert_eq!(roundtrip(&LockAction::Clear), LockAction::Clear);
     }
 
@@ -344,5 +583,66 @@ mod tests {
             session: ClientId { high: 3, low: 4 },
         };
         assert_eq!(roundtrip(&s), s);
+    }
+
+    #[test]
+    fn test_acl_roundtrip() {
+        let acl = Acl {
+            uid: 0,
+            gid: 0,
+            perm: 0o755,
+            iflags: 0x10, // FS_IMMUTABLE_FL
+        };
+        assert_eq!(roundtrip(&acl), acl);
+    }
+
+    #[test]
+    fn test_versioned_length_roundtrip() {
+        let vl = VersionedLength {
+            version: 42,
+            length: 8192,
+        };
+        assert_eq!(roundtrip(&vl), vl);
+    }
+
+    #[test]
+    fn test_open_flags_contains() {
+        let flags = OpenFlags(0o102); // O_CREAT | O_RDWR on Linux
+        assert!(flags.contains(2)); // O_RDWR
+    }
+
+    #[test]
+    fn test_at_flags_contains() {
+        let flags = AtFlags(0x100); // AT_SYMLINK_NOFOLLOW on Linux
+        assert!(flags.contains(0x100));
+        assert!(!flags.contains(0x400));
+    }
+
+    #[test]
+    fn test_iflags_contains() {
+        let flags = IFlags(0x10); // FS_IMMUTABLE_FL
+        assert!(flags.contains(0x10));
+        assert!(!flags.contains(0x20));
+    }
+
+    #[test]
+    fn test_req_base_roundtrip() {
+        let rb = ReqBase {
+            user: UserInfo {
+                uid: 1000,
+                gid: 100,
+                gids: vec![100],
+            },
+            client: ClientId { high: 1, low: 2 },
+            forward: 0,
+            uuid: ClientId { high: 3, low: 4 },
+        };
+        assert_eq!(roundtrip(&rb), rb);
+    }
+
+    #[test]
+    fn test_rsp_base_roundtrip() {
+        let rb = RspBase {};
+        assert_eq!(roundtrip(&rb), rb);
     }
 }

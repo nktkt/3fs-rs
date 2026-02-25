@@ -6,6 +6,11 @@ license.workspace = true
 
 [dependencies]
 hf3fs-types.workspace = true
+hf3fs-app.workspace = true
+hf3fs-config.workspace = true
+hf3fs-logging.workspace = true
+anyhow.workspace = true
+clap.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

@@ -11,3 +11,12 @@ hf3fs-net.workspace = true
 async-trait.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+anyhow.workspace = true
+parking_lot.workspace = true
+rand.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }
+serde_json.workspace = true

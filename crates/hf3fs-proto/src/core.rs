@@ -1,36 +1,54 @@
 //! Core service RPC messages.
 //!
-//! Based on 3FS/src/fbs/core/service/Rpc.h
+//! Based on 3FS/src/fbs/core/service/Rpc.h and CoreServiceDef.h
+//!
+//! Service methods (from C++ CoreServiceDef.h):
+//!   1 - echo(EchoReq, EchoRsp)
+//!   2 - getConfig(GetConfigReq, GetConfigRsp)
+//!   3 - renderConfig(RenderConfigReq, RenderConfigRsp)
+//!   4 - hotUpdateConfig(HotUpdateConfigReq, HotUpdateConfigRsp)
+//!   5 - getLastConfigUpdateRecord(GetLastConfigUpdateRecordReq, GetLastConfigUpdateRecordRsp)
+//!   6 - shutdown(ShutdownReq, ShutdownRsp)
 
 use hf3fs_serde::{WireDeserialize, WireSerialize};
 use serde::{Deserialize, Serialize};
 
-/// Echo request/response - mirrors `EchoMessage` in C++.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+/// Echo request - mirrors `core::EchoMessage` / `EchoReq` in C++.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct EchoReq {
     pub str: String,
 }
 
 /// Echo response (same shape as request).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct EchoRsp {
     pub str: String,
 }
 
 /// Request to retrieve the current configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct GetConfigReq {
     pub config_key: String,
 }
 
 /// Response containing the current configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct GetConfigRsp {
     pub config: String,
 }
 
 /// Request to render a configuration template.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct RenderConfigReq {
     pub config_template: String,
     pub test_update: bool,
@@ -38,7 +56,9 @@ pub struct RenderConfigReq {
 }
 
 /// Response with the rendered configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct RenderConfigRsp {
     pub config_after_render: String,
     pub update_status: i32,
@@ -46,34 +66,46 @@ pub struct RenderConfigRsp {
 }
 
 /// Request to hot-update the running configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct HotUpdateConfigReq {
     pub update: String,
     pub render: bool,
 }
 
 /// Response acknowledging a hot config update.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct HotUpdateConfigRsp {}
 
 /// Request to retrieve the last config update record.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct GetLastConfigUpdateRecordReq {}
 
 /// Response with the last config update record.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct GetLastConfigUpdateRecordRsp {
     pub record: Option<String>,
 }
 
 /// Request to shut down the service.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct ShutdownReq {
     pub graceful: bool,
 }
 
 /// Response acknowledging the shutdown request.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, WireSerialize, WireDeserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, WireSerialize, WireDeserialize,
+)]
 pub struct ShutdownRsp {}
 
 #[cfg(test)]
@@ -169,5 +201,18 @@ mod tests {
 
         let rsp = ShutdownRsp {};
         assert_eq!(roundtrip(&rsp), rsp);
+    }
+
+    #[test]
+    fn test_echo_default() {
+        let req = EchoReq::default();
+        assert_eq!(req.str, "");
+    }
+
+    #[test]
+    fn test_render_config_default() {
+        let req = RenderConfigReq::default();
+        assert!(!req.test_update);
+        assert!(!req.is_hot_update);
     }
 }

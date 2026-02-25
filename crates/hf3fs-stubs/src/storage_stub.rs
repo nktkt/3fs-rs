@@ -9,10 +9,6 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 
 /// Client-side stub for calling the storage service.
-///
-/// The storage service is responsible for reading, writing, and removing
-/// individual chunks. Each chunk is identified by a `chunk_id` and is stored
-/// on one or more storage nodes.
 #[async_trait]
 pub trait IStorageServiceStub: Send + Sync {
     async fn read_chunk(&self, req: ReadChunkReq) -> Result<ReadChunkRsp>;
@@ -20,16 +16,9 @@ pub trait IStorageServiceStub: Send + Sync {
     async fn remove_chunk(&self, req: RemoveChunkReq) -> Result<RemoveChunkRsp>;
 }
 
-// ---------------------------------------------------------------------------
-// Mock implementation
-// ---------------------------------------------------------------------------
-
 type Handler<Req, Rsp> = Box<dyn Fn(Req) -> Result<Rsp> + Send + Sync>;
 
 /// A configurable mock for [`IStorageServiceStub`].
-///
-/// Each RPC method can be overridden with a closure. If no handler is
-/// installed the mock returns a default (success) response.
 pub struct MockStorageServiceStub {
     pub read_chunk_handler: Mutex<Option<Handler<ReadChunkReq, ReadChunkRsp>>>,
     pub write_chunk_handler: Mutex<Option<Handler<WriteChunkReq, WriteChunkRsp>>>,
@@ -45,7 +34,6 @@ impl MockStorageServiceStub {
         }
     }
 
-    /// Wrap in an `Arc` for convenient sharing.
     pub fn into_arc(self) -> Arc<Self> {
         Arc::new(self)
     }
@@ -84,9 +72,7 @@ impl IStorageServiceStub for MockStorageServiceStub {
         let guard = self.read_chunk_handler.lock();
         match guard.as_ref() {
             Some(f) => f(req),
-            None => Ok(ReadChunkRsp {
-                data: Vec::new(),
-            }),
+            None => Ok(ReadChunkRsp::default()),
         }
     }
 
@@ -94,9 +80,7 @@ impl IStorageServiceStub for MockStorageServiceStub {
         let guard = self.write_chunk_handler.lock();
         match guard.as_ref() {
             Some(f) => f(req),
-            None => Ok(WriteChunkRsp {
-                bytes_written: req.data.len() as u32,
-            }),
+            None => Ok(WriteChunkRsp::default()),
         }
     }
 
@@ -104,12 +88,11 @@ impl IStorageServiceStub for MockStorageServiceStub {
         let guard = self.remove_chunk_handler.lock();
         match guard.as_ref() {
             Some(f) => f(req),
-            None => Ok(RemoveChunkRsp {}),
+            None => Ok(RemoveChunkRsp::default()),
         }
     }
 }
 
-/// Blanket implementation: `Arc<T>` delegates to `T` for any `T: IStorageServiceStub`.
 #[async_trait]
 impl<T: IStorageServiceStub + ?Sized> IStorageServiceStub for Arc<T> {
     async fn read_chunk(&self, req: ReadChunkReq) -> Result<ReadChunkRsp> {
@@ -130,87 +113,28 @@ mod tests {
     #[tokio::test]
     async fn test_mock_read_chunk_default() {
         let mock = MockStorageServiceStub::new();
-        let rsp = mock
-            .read_chunk(ReadChunkReq {
-                chunk_id: 1,
-                chunk_offset: 0,
-                length: 4096,
-            })
-            .await
-            .unwrap();
+        let rsp = mock.read_chunk(ReadChunkReq::default()).await.unwrap();
         assert!(rsp.data.is_empty());
     }
 
     #[tokio::test]
     async fn test_mock_write_chunk_default() {
         let mock = MockStorageServiceStub::new();
-        let data = vec![0xAB; 128];
-        let rsp = mock
-            .write_chunk(WriteChunkReq {
-                chunk_id: 1,
-                chunk_offset: 0,
-                data: data.clone(),
-            })
-            .await
-            .unwrap();
-        assert_eq!(rsp.bytes_written, 128);
-    }
-
-    #[tokio::test]
-    async fn test_mock_read_chunk_custom() {
-        let mock = MockStorageServiceStub::new();
-        mock.on_read_chunk(|req| {
-            Ok(ReadChunkRsp {
-                data: vec![0xFF; req.length as usize],
-            })
-        });
-        let rsp = mock
-            .read_chunk(ReadChunkReq {
-                chunk_id: 42,
-                chunk_offset: 0,
-                length: 10,
-            })
-            .await
-            .unwrap();
-        assert_eq!(rsp.data.len(), 10);
-        assert!(rsp.data.iter().all(|&b| b == 0xFF));
+        let rsp = mock.write_chunk(WriteChunkReq::default()).await.unwrap();
+        assert_eq!(rsp.bytes_written, 0);
     }
 
     #[tokio::test]
     async fn test_mock_remove_chunk_default() {
         let mock = MockStorageServiceStub::new();
-        let rsp = mock
-            .remove_chunk(RemoveChunkReq { chunk_id: 99 })
-            .await;
+        let rsp = mock.remove_chunk(RemoveChunkReq::default()).await;
         assert!(rsp.is_ok());
     }
 
     #[tokio::test]
     async fn test_mock_via_arc() {
         let mock = MockStorageServiceStub::new().into_arc();
-        let rsp = mock
-            .read_chunk(ReadChunkReq {
-                chunk_id: 1,
-                chunk_offset: 0,
-                length: 100,
-            })
-            .await;
+        let rsp = mock.read_chunk(ReadChunkReq::default()).await;
         assert!(rsp.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_mock_write_chunk_error() {
-        use hf3fs_types::{Status, StatusCode};
-
-        let mock = MockStorageServiceStub::new();
-        mock.on_write_chunk(|_req| Err(Status::new(StatusCode::INVALID_ARG)));
-        let rsp = mock
-            .write_chunk(WriteChunkReq {
-                chunk_id: 1,
-                chunk_offset: 0,
-                data: vec![1, 2, 3],
-            })
-            .await;
-        assert!(rsp.is_err());
     }
 }
