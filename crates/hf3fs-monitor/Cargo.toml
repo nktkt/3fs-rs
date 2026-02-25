@@ -1,0 +1,13 @@
+[package]
+name = "hf3fs-monitor"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+hf3fs-types = { workspace = true }
+parking_lot = { workspace = true }
+dashmap = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }

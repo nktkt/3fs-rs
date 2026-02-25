@@ -1,0 +1,120 @@
+[workspace]
+members = [
+    "crates/hf3fs-types",
+    "crates/hf3fs-utils",
+    "crates/hf3fs-serde-derive",
+    "crates/hf3fs-serde",
+    "crates/hf3fs-config-derive",
+    "crates/hf3fs-config",
+    "crates/hf3fs-logging",
+    "crates/hf3fs-monitor",
+    "crates/hf3fs-memory",
+    "crates/hf3fs-net",
+    "crates/hf3fs-net-tcp",
+    "crates/hf3fs-net-rdma",
+    "crates/hf3fs-kv",
+    "crates/hf3fs-kv-backends",
+    "crates/hf3fs-fdb",
+    "crates/hf3fs-app",
+    "crates/hf3fs-service-derive",
+    "crates/hf3fs-proto",
+    "crates/hf3fs-stubs",
+    "crates/hf3fs-core-service",
+    "crates/hf3fs-chunk-engine",
+    "crates/hf3fs-storage-service",
+    "crates/hf3fs-meta-service",
+    "crates/hf3fs-mgmtd-service",
+    "crates/hf3fs-client",
+    "crates/hf3fs-cli",
+    "crates/hf3fs-fuse",
+    "crates/hf3fs-lib",
+    "crates/hf3fs-trash-cleaner",
+    "crates/hf3fs-analytics",
+    "crates/hf3fs-monitor-collector",
+    "bins/hf3fs-meta-server",
+    "bins/hf3fs-storage-server",
+    "bins/hf3fs-mgmtd-server",
+    "bins/hf3fs-fuse-mount",
+    "bins/hf3fs-admin",
+    "bins/hf3fs-monitor-collector-bin",
+    "bins/hf3fs-simple-example",
+]
+resolver = "2"
+
+[workspace.package]
+authors = ["dev <noreply@deepseek.com>"]
+edition = "2021"
+license = "MIT"
+rust-version = "1.85.0"
+
+[workspace.dependencies]
+# Internal crates
+hf3fs-types = { path = "crates/hf3fs-types" }
+hf3fs-utils = { path = "crates/hf3fs-utils" }
+hf3fs-serde-derive = { path = "crates/hf3fs-serde-derive" }
+hf3fs-serde = { path = "crates/hf3fs-serde" }
+hf3fs-config-derive = { path = "crates/hf3fs-config-derive" }
+hf3fs-config = { path = "crates/hf3fs-config" }
+hf3fs-logging = { path = "crates/hf3fs-logging" }
+hf3fs-monitor = { path = "crates/hf3fs-monitor" }
+hf3fs-memory = { path = "crates/hf3fs-memory" }
+hf3fs-net = { path = "crates/hf3fs-net" }
+hf3fs-net-tcp = { path = "crates/hf3fs-net-tcp" }
+hf3fs-net-rdma = { path = "crates/hf3fs-net-rdma" }
+hf3fs-kv = { path = "crates/hf3fs-kv" }
+hf3fs-kv-backends = { path = "crates/hf3fs-kv-backends" }
+hf3fs-fdb = { path = "crates/hf3fs-fdb" }
+hf3fs-app = { path = "crates/hf3fs-app" }
+hf3fs-service-derive = { path = "crates/hf3fs-service-derive" }
+hf3fs-proto = { path = "crates/hf3fs-proto" }
+hf3fs-stubs = { path = "crates/hf3fs-stubs" }
+hf3fs-core-service = { path = "crates/hf3fs-core-service" }
+hf3fs-chunk-engine = { path = "crates/hf3fs-chunk-engine" }
+hf3fs-storage-service = { path = "crates/hf3fs-storage-service" }
+hf3fs-meta-service = { path = "crates/hf3fs-meta-service" }
+hf3fs-mgmtd-service = { path = "crates/hf3fs-mgmtd-service" }
+hf3fs-client = { path = "crates/hf3fs-client" }
+hf3fs-cli = { path = "crates/hf3fs-cli" }
+hf3fs-fuse = { path = "crates/hf3fs-fuse" }
+hf3fs-lib = { path = "crates/hf3fs-lib" }
+hf3fs-trash-cleaner = { path = "crates/hf3fs-trash-cleaner" }
+hf3fs-analytics = { path = "crates/hf3fs-analytics" }
+hf3fs-monitor-collector = { path = "crates/hf3fs-monitor-collector" }
+
+# External dependencies
+anyhow = "1"
+arc-swap = "1"
+async-trait = "0.1"
+bytes = "1"
+byteorder = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+crc32c = "0.6"
+crossbeam = "0.8"
+crossbeam-deque = "0.8"
+dashmap = "6"
+futures = "0.3"
+libc = "0.2"
+num_enum = "0.7"
+parking_lot = "0.12"
+pin-project-lite = "0.2"
+proc-macro2 = "1"
+quote = "1"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+syn = { version = "2", features = ["full", "extra-traits"] }
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+toml = "0.8"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["fmt", "json", "env-filter"] }
+zstd = "0.13"
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
